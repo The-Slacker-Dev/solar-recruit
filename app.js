@@ -90,6 +90,7 @@
       if (!response.ok || result.ok !== true) {
         throw new Error(result.error || 'Could not deliver your application. Please try again.');
       }
+      if (typeof window.fbq === 'function') window.fbq('track', 'Lead');
       form.hidden = true;
       success.hidden = false;
       success.scrollIntoView({ behavior: 'smooth', block: 'center' });
