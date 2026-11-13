@@ -1,5 +1,27 @@
 import { readFile } from 'node:fs/promises';
 
+async function telegramRequest(token, method, query = '') {
+  try {
+    const response = await fetch(`https://api.telegram.org/bot${token}/${method}${query}`, {
+      signal: AbortSignal.timeout(30000),
+    });
+    const data = await response.json();
+    if (!response.ok || data.ok !== true) {
+      if (method === 'getMe') throw new Error('Telegram rejected the bot token. Check TELEGRAM_BOT_TOKEN in .env.');
+      throw new Error('Telegram could not return updates. If this bot uses a webhook, getUpdates is unavailable.');
+    }
+    return data;
+  } catch (error) {
+    if (error.name === 'TimeoutError' || error.name === 'AbortError') {
+      throw new Error(`${method} timed out after 30 seconds. Check access to api.telegram.org from this computer.`);
+    }
+    if (error.cause?.code) {
+      throw new Error(`${method} could not connect to api.telegram.org (${error.cause.code}).`);
+    }
+    throw error;
+  }
+}
+
 async function main() {
   const envText = await readFile(new URL('../.env', import.meta.url), 'utf8');
   const tokenLine = envText.split(/\r?\n/).find((line) => /^\s*TELEGRAM_BOT_TOKEN\s*=/.test(line));
@@ -8,13 +30,10 @@ async function main() {
     throw new Error('Add TELEGRAM_BOT_TOKEN to .env first.');
   }
 
-  const response = await fetch(`https://api.telegram.org/bot${token}/getUpdates?limit=100`, {
-    signal: AbortSignal.timeout(10000),
-  });
-  const data = await response.json();
-  if (!response.ok || data.ok !== true) {
-    throw new Error('Telegram could not return updates. If this bot uses a webhook, getUpdates is unavailable.');
-  }
+  const bot = await telegramRequest(token, 'getMe');
+  console.log(`Bot: @${bot.result.username} (ID: ${bot.result.id})`);
+
+  const data = await telegramRequest(token, 'getUpdates', '?limit=100');
   const groups = new Map();
   for (const update of data.result) {
     const chat = update.message?.chat ?? update.my_chat_member?.chat;
