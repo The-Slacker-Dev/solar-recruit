@@ -9,11 +9,6 @@ function clean(value, maxLength) {
   return typeof value === 'string' ? value.trim().slice(0, maxLength + 1) : '';
 }
 
-function isAustralianPhone(value) {
-  const number = value.replace(/[\s().-]/g, '');
-  return /^(?:0[2378]\d{8}|04\d{8}|\+61[2378]\d{8}|\+614\d{8})$/.test(number);
-}
-
 export default async function handler(req, res) {
   res.setHeader('Cache-Control', 'no-store');
   if (req.method !== 'POST') {
@@ -64,7 +59,6 @@ export default async function handler(req, res) {
       !role || !states.has(state) ||
       data.authz !== true || data.consent !== true ||
       !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(fields.email) ||
-      !isAustralianPhone(fields.phone) ||
       !/^[0-9]{4}$/.test(fields.postcode)) {
     return reply(res, 400, 'Check the required fields and try again.');
   }
