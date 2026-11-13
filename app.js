@@ -39,6 +39,11 @@
     if (err) err.remove();
   }
 
+  function isAustralianPhone(value) {
+    const number = value.replace(/[\s().-]/g, '');
+    return /^(?:0[2378]\d{8}|04\d{8}|\+61[2378]\d{8}|\+614\d{8})$/.test(number);
+  }
+
   form.addEventListener('submit', async (e) => {
     e.preventDefault();
     clearError();
@@ -61,6 +66,13 @@
       if (!firstInvalid) firstInvalid = email;
     }
 
+    // Accept Australian mobile and landline numbers in national or +61 format.
+    const phone = form.querySelector('#phone');
+    if (phone.value && !isAustralianPhone(phone.value.trim())) {
+      markInvalid(phone);
+      if (!firstInvalid) firstInvalid = phone;
+    }
+
     // Australian postcode check.
     const postcode = form.querySelector('#postcode');
     if (postcode.value && !/^[0-9]{4}$/.test(postcode.value.trim())) {
@@ -69,7 +81,9 @@
     }
 
     if (firstInvalid) {
-      showError('Please complete the highlighted field and try again.');
+      showError(firstInvalid === phone
+        ? 'Enter an Australian phone number, such as 0412 345 678 or +61 412 345 678.'
+        : 'Please complete the highlighted field and try again.');
       firstInvalid.focus({ preventScroll: false });
       firstInvalid.scrollIntoView({ behavior: 'smooth', block: 'center' });
       return;

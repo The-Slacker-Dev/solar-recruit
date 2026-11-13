@@ -23,9 +23,19 @@ function response() {
 }
 
 test('rejects invalid applications before contacting Telegram', async () => {
-  const res = response();
-  await handler(request({ ...validLead, email: 'bad' }), res);
-  assert.equal(res.code, 400);
+  for (const changes of [
+    { email: 'bad' },
+    { phone: '1221321321321321' },
+    { phone: '+1 212 555 1234' },
+    { phone: '1300 123 456' },
+    { phone: '0412 345 ABC' },
+    { postcode: '12345' },
+    { state: 'California' },
+  ]) {
+    const res = response();
+    await handler(request({ ...validLead, ...changes }), res);
+    assert.equal(res.code, 400, JSON.stringify(changes));
+  }
 });
 
 test('only confirms delivery after Telegram accepts the message', async () => {
@@ -41,10 +51,14 @@ test('only confirms delivery after Telegram accepts the message', async () => {
       assert.match(sent.text, /Jane Citizen/);
       return { ok: true, json: async () => ({ ok: true }) };
     };
-    const delivered = response();
-    await handler(request(), delivered);
-    assert.equal(delivered.code, 200);
-    assert.deepEqual(delivered.body, { ok: true });
+    for (const phone of [
+      '0412 345 678', '+61 412 345 678', '(02) 1234 5678', '+61 2 1234 5678',
+    ]) {
+      const delivered = response();
+      await handler(request({ ...validLead, phone }), delivered);
+      assert.equal(delivered.code, 200, phone);
+      assert.deepEqual(delivered.body, { ok: true });
+    }
 
     globalThis.fetch = async () => ({ ok: false, json: async () => ({ ok: false }) });
     const failed = response();
